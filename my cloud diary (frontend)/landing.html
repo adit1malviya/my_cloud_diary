@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Diary - Landing Page</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="styleLanding.css">
+</head>
+<body>
+
+  <header>
+    <h1>MY DIARY</h1>
+  </header>
+
+  <section class="dashboard">
+    <div class="grid-container">
+      <div class="box" id="blogBox">
+        <span class="icon">📝</span>
+        <h3>Blog</h3>
+      </div>
+      <div class="box" id="imagesBox">
+        <span class="icon">📸</span>
+        <h3>Images</h3>
+      </div>
+      <div class="box" id="videosBox">
+        <span class="icon">🎥</span>
+        <h3>Videos</h3>
+      </div>
+      <div class="box" id="doodleBox">
+        <span class="icon">🎨</span>
+        <h3>Doodle</h3>
+      </div>
+    </div>
+  </section>
+
+  <!-- JS -->
+  <script>
+  document.getElementById("blogBox").addEventListener("click", () => {
+    window.location.href = "blog.html"; // Redirects to blog page
+  });
+
+  document.getElementById("imagesBox").addEventListener("click", () => {
+    alert("Images section clicked");
+  });
+
+  document.getElementById("videosBox").addEventListener("click", () => {
+    alert("Videos section clicked");
+  });
+
+  document.getElementById("doodleBox").addEventListener("click", () => {
+    alert("Doodle section clicked");
+  });
+</script>
+</body>
+</html>
