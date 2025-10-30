@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My CloudDiary - Images</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    /* Pastel unified style (matches blog) */
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Quicksand', sans-serif; }
+    body { background: linear-gradient(180deg,#ffeef3 0%, #fff8fa 100%); min-height:100vh; display:flex; flex-direction:column; }
+    header { background:#ff9bbd; color:#fff; padding:18px 12px; text-align:center; font-family:'Dancing Script',cursive; font-size:1.8rem; box-shadow:0 4px 10px rgba(0,0,0,0.08); }
+    main { flex:1; display:flex; justify-content:center; align-items:flex-start; padding:28px 16px; }
+
+    .card {
+      width:100%; max-width:720px; background:#fff; border-radius:14px; padding:20px; box-shadow:0 8px 20px rgba(255,182,193,0.18);
+      display:flex; flex-direction:column; gap:12px;
+    }
+
+    input[type="text"] {
+      padding:12px 14px; border-radius:12px; border:1px solid #f0cbd6; outline:none;
+      box-shadow:0 0 6px rgba(255,182,193,0.12);
+    }
+
+    .file-label {
+      display:inline-block; margin-top:6px;
+      background:#fff2f8; border:1px dashed #ffc7da; padding:10px 14px; border-radius:12px; cursor:pointer;
+    }
+    .file-label input { display:none; }
+
+    .preview {
+      display:flex; gap:12px; align-items:center; margin-top:8px;
+    }
+    .preview img { width:220px; max-width:45vw; height:140px; object-fit:cover; border-radius:10px; border:1px solid #f2d4df; }
+
+    .btn-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:8px; }
+    .btn {
+      background:white; border:none; padding:10px 18px; border-radius:30px; cursor:pointer;
+      box-shadow:0 0 10px rgba(255,182,193,0.8);
+    }
+    .btn.primary { background:#ff9bbd; color:#fff; }
+    .btn.secondary { background:#ffeef3; }
+    .hint { color:#666; font-size:0.9rem; margin-top:8px; }
+
+    @media(max-width:600px){
+      .preview img { width:160px; height:110px; }
+      .card { padding:14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>My Diary - Images</header>
+
+  <main>
+    <div class="card">
+      <input id="imgTitle" type="text" placeholder="Image Title (required)" />
+
+      <label class="file-label" for="fileInput">
+        <input id="fileInput" type="file" accept="image/*" />
+        📁 Select image
+      </label>
+
+      <div id="previewWrap" class="preview" style="display:none;">
+        <div>
+          <p style="font-size:0.9rem;color:#444;margin-bottom:6px;">Preview</p>
+          <img id="previewImg" alt="preview" />
+        </div>
+        <div style="flex:1;">
+          <p style="font-size:0.95rem;color:#444;margin-bottom:8px;" id="fileInfo"></p>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn primary" id="saveBtn">💾 Save Image</button>
+        <button class="btn secondary" id="viewBtn">🖼️ View My Images</button>
+        <button class="btn" id="backBtn">🔙 Back to Dashboard</button>
+      </div>
+
+      <p class="hint">Keep image small (recommended ≤ 150 KB). This prototype stores base64 in Firestore (not for large production use).</p>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    // your firebase config (same as other pages)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDHr1TTUnAjGJyjDOqBuqvo2tnAKiNvdCE",
+      authDomain: "my-clouddiary.firebaseapp.com",
+      projectId: "my-clouddiary",
+      storageBucket: "my-clouddiary.firebasestorage.app",
+      messagingSenderId: "859635487485",
+      appId: "1:859635487485:web:07bd2c20d274037cade494",
+      measurementId: "G-2WVB9HTS5R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const fileInput = document.getElementById('fileInput');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewImg = document.getElementById('previewImg');
+    const fileInfo = document.getElementById('fileInfo');
+    const imgTitle = document.getElementById('imgTitle');
+    const saveBtn = document.getElementById('saveBtn');
+    const viewBtn = document.getElementById('viewBtn');
+    const backBtn = document.getElementById('backBtn');
+
+    let currentUserEmail = null;
+    let chosenFile = null;
+
+    // limit size for Plan B (base64 in Firestore)
+    const MAX_BYTES = 150 * 1024; // 150 KB
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        alert('Please log in first.');
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUserEmail = user.email;
+      console.log('Images page: logged in as', currentUserEmail);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      if (!f) { chosenFile = null; previewWrap.style.display='none'; return; }
+      if (f.size > MAX_BYTES) {
+        alert('Image too large. Choose an image ≤ ' + Math.round(MAX_BYTES/1024) + ' KB.');
+        fileInput.value = '';
+        chosenFile = null;
+        previewWrap.style.display = 'none';
+        return;
+      }
+      chosenFile = f;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        previewImg.src = ev.target.result;
+        previewWrap.style.display = 'flex';
+        fileInfo.textContent = `${f.name} — ${(f.size/1024).toFixed(1)} KB`;
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // helper: convert file -> dataURL promise
+    const fileToDataURL = (file) => new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.onerror = (err) => rej(err);
+      r.readAsDataURL(file);
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      const title = imgTitle.value.trim();
+      if (!title) { alert('Please enter an image title.'); return; }
+      if (!chosenFile) { alert('Please select an image first.'); return; }
+      if (!currentUserEmail) { alert('Auth not ready. Reload or log in again.'); return; }
+
+      try {
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        const dataUrl = await fileToDataURL(chosenFile);
+
+        await addDoc(collection(db, 'images'), {
+          user: currentUserEmail,
+          title,
+          filename: chosenFile.name,
+          dataUrl
+        });
+
+        alert('Image saved successfully!');
+        // reset
+        imgTitle.value = '';
+        fileInput.value = '';
+        chosenFile = null;
+        previewWrap.style.display = 'none';
+      } catch (err) {
+        console.error('Save image error:', err);
+        alert('Error saving image: ' + err.message);
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '💾 Save Image';
+      }
+    });
+
+    viewBtn.addEventListener('click', () => { window.location.href = 'viewImages.html'; });
+    backBtn.addEventListener('click', () => { window.location.href = 'landing.html'; });
+  </script>
+</body>
+</html>
