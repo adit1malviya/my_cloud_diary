@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My CloudDiary - Videos & GIFs</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Quicksand',sans-serif;}
+    body{background:linear-gradient(180deg,#ffeef3 0%, #fff8fa 100%);min-height:100vh;padding:18px;display:flex;flex-direction:column;align-items:center;}
+    header{background:#ff9bbd;color:#fff;padding:14px;border-radius:10px;text-align:center;font-family:'Dancing Script',cursive;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,0.08);width:100%;max-width:600px;margin-bottom:20px;}
+    .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 6px 18px rgba(255,182,193,0.12);max-width:500px;width:100%;display:flex;flex-direction:column;gap:12px;}
+    input[type="text"]{padding:10px;border-radius:8px;border:1px solid #f0cbd6;outline:none;width:100%;}
+    .file-label{display:inline-block;margin-top:6px;background:#fff2f8;border:1px dashed #ffc7da;padding:10px 14px;border-radius:12px;cursor:pointer;}
+    .file-label input{display:none;}
+    video, img{width:100%;max-height:280px;border-radius:10px;margin-top:10px;display:none;}
+    .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;justify-content:center;}
+    .btn{background:white;border:none;padding:10px 18px;border-radius:30px;cursor:pointer;box-shadow:0 0 10px rgba(255,182,193,0.8);}
+    .btn.primary{background:#ff9bbd;color:#fff;}
+    .btn.secondary{background:#ffeef3;}
+    .hint{color:#666;font-size:0.9rem;margin-top:8px;}
+    @media(max-width:500px){video,img{max-height:200px;}}
+  </style>
+</head>
+<body>
+
+<header>My Diary - Videos & GIFs</header>
+
+<div class="card">
+  <input id="videoTitle" type="text" placeholder="Title (required)" />
+  
+  <label class="file-label" for="fileInput">
+    <input id="fileInput" type="file" accept="video/*,image/gif" />
+    🎬 Select Video or GIF
+  </label>
+
+  <video id="previewVideo" controls></video>
+  <img id="previewGif" alt="GIF Preview" />
+
+  <div class="btn-row">
+    <button class="btn primary" id="saveBtn">💾 Save</button>
+    <button class="btn secondary" id="viewBtn">🎥 View My Media</button>
+    <button class="btn" id="backBtn">🔙 Back to Dashboard</button>
+  </div>
+
+  <p class="hint">Keep files small (recommended ≤ 5 MB). This prototype stores base64 in Firestore.</p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDHr1TTUnAjGJyjDOqBuqvo2tnAKiNvdCE",
+    authDomain: "my-clouddiary.firebaseapp.com",
+    projectId: "my-clouddiary",
+    storageBucket: "my-clouddiary.firebasestorage.app",
+    messagingSenderId: "859635487485",
+    appId: "1:859635487485:web:07bd2c20d274037cade494",
+    measurementId: "G-2WVB9HTS5R"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  const fileInput = document.getElementById('fileInput');
+  const previewVideo = document.getElementById('previewVideo');
+  const previewGif = document.getElementById('previewGif');
+  const videoTitle = document.getElementById('videoTitle');
+  const saveBtn = document.getElementById('saveBtn');
+  const viewBtn = document.getElementById('viewBtn');
+  const backBtn = document.getElementById('backBtn');
+
+  let currentUserEmail = null;
+  let chosenFile = null;
+  const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+  onAuthStateChanged(auth, user => {
+    if(!user){ alert('Please log in first.'); window.location.href='index.html'; return; }
+    currentUserEmail = user.email;
+  });
+
+  fileInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f){ chosenFile=null; previewVideo.style.display='none'; previewGif.style.display='none'; return; }
+    if(f.size > MAX_BYTES){ 
+      alert("File too large. Max 5MB."); 
+      fileInput.value=''; chosenFile=null; 
+      previewVideo.style.display='none'; previewGif.style.display='none'; 
+      return; 
+    }
+    chosenFile = f;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      if(f.type === "image/gif"){
+        previewGif.src = ev.target.result;
+        previewGif.style.display = 'block';
+        previewVideo.style.display = 'none';
+      } else {
+        previewVideo.src = ev.target.result;
+        previewVideo.style.display = 'block';
+        previewGif.style.display = 'none';
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+
+  const fileToDataURL = file => new Promise((res, rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result);
+    r.onerror = err=>rej(err);
+    r.readAsDataURL(file);
+  });
+
+  saveBtn.addEventListener('click', async ()=>{
+    const title = videoTitle.value.trim();
+    if(!title){ alert('Enter a title.'); return; }
+    if(!chosenFile){ alert('Select a file first.'); return; }
+    if(!currentUserEmail){ alert('Auth not ready. Reload.'); return; }
+
+    try{
+      saveBtn.disabled=true; saveBtn.textContent='Saving...';
+      const dataUrl = await fileToDataURL(chosenFile);
+      await addDoc(collection(db,'videos'), { 
+        user: currentUserEmail, 
+        title, 
+        filename: chosenFile.name, 
+        type: chosenFile.type,
+        dataUrl 
+      });
+      alert('Saved successfully!');
+      videoTitle.value=''; fileInput.value=''; chosenFile=null; 
+      previewVideo.style.display='none'; previewGif.style.display='none';
+    } catch(err){
+      console.error(err); 
+      alert('Error saving file: '+err.message);
+    } finally{
+      saveBtn.disabled=false; saveBtn.textContent='💾 Save';
+    }
+  });
+
+  viewBtn.addEventListener('click', ()=>window.location.href='viewVideos.html');
+  backBtn.addEventListener('click', ()=>window.location.href='landing.html');
+</script>
+
+</body>
+</html>

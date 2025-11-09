@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Diary - Blog</title>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="styleBlog.css">
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+
+    // Your Firebase configuration (same as login project)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDHr1TTUnAjGJyjDOqBuqvo2tnAKiNvdCE",
+      authDomain: "my-clouddiary.firebaseapp.com",
+      projectId: "my-clouddiary",
+      storageBucket: "my-clouddiary.firebasestorage.app",
+      messagingSenderId: "859635487485",
+      appId: "1:859635487485:web:07bd2c20d274037cade494",
+      measurementId: "G-2WVB9HTS5R"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Track logged-in user
+    let currentUserEmail = null;
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUserEmail = user.email;
+        console.log("Logged in as:", currentUserEmail);
+      } else {
+        console.log("No user logged in");
+        alert("You must log in first!");
+        window.location.href = "index.html";
+      }
+    });
+
+    // Save blog
+    window.saveBlog = async function() {
+      const title = document.getElementById("blogTitle").value.trim();
+      const content = document.getElementById("blogContent").value.trim();
+
+      if (!title || !content) {
+        alert("Please fill in both title and content!");
+        return;
+      }
+
+      if (!currentUserEmail) {
+        alert("You must be logged in to save a blog!");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "blogs"), {
+          user: currentUserEmail,
+          title,
+          content
+        });
+        alert("Blog saved successfully!");
+        document.getElementById("blogTitle").value = "";
+        document.getElementById("blogContent").value = "";
+      } catch (error) {
+        alert("Error saving blog: " + error.message);
+      }
+    };
+
+    // View blogs
+    window.viewMyBlogs = function() {
+      window.location.href = "viewBlogs.html";
+    };
+
+    // Go back to dashboard
+    window.goBack = function() {
+      window.location.href = "landing.html";
+    };
+  </script>
+</head>
+
+<body>
+  <header>
+    <h1>My Diary - Blog</h1>
+  </header>
+
+  <main class="blog-container">
+    <input type="text" id="blogTitle" placeholder="Blog Title" />
+    <textarea id="blogContent" placeholder="Write your blog here..."></textarea>
+
+    <div class="btn-group">
+      <button class="btn" onclick="saveBlog()">Save Blog</button>
+      <button class="btn" onclick="viewMyBlogs()">View My Blogs</button>
+      <button class="btn back-btn" onclick="goBack()">Back to Dashboard</button>
+    </div>
+  </main>
+</body>
+</html>

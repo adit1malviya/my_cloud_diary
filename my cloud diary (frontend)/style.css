@@ -1,0 +1,202 @@
+/* ---------- General Setup ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Quicksand', sans-serif;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  background-color: #ffeef3;
+}
+
+/* ---------- Section 1: Intro Page ---------- */
+.intro {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  background: url("d1.png") no-repeat center center;
+  background-size: contain;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Sparkles */
+.sparkle-container {
+  position: absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events: none;
+  z-index:2;
+}
+
+.sparkle-container span {
+  position: absolute;
+  background: rgba(255,255,255,0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(255,255,255,0.8);
+  animation: float 4s linear infinite;
+  animation-delay: calc(var(--i) * 0.05s);
+}
+
+@keyframes float {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  25% { transform: translate(20px,-20px) scale(1.2); opacity: 0.7; }
+  50% { transform: translate(-20px,-40px) scale(1); opacity: 0.5; }
+  75% { transform: translate(15px,-30px) scale(1.1); opacity: 0.7; }
+  100% { transform: translate(0,0) scale(1); opacity: 1; }
+}
+
+/* Scroll Arrow */
+.scroll-down {
+  font-size: 2.2rem;
+  margin-bottom: 40px;
+  cursor: pointer;
+  color: #ff9bbd;
+  animation: floatArrow 2s ease-in-out infinite;
+  text-shadow: 0 0 8px rgba(255, 175, 200, 0.6);
+  z-index: 3;
+}
+
+@keyframes floatArrow {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* ---------- Section 2: Diary Page ---------- */
+.second {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  background: url("d2.png") no-repeat center center;
+  background-size: contain;
+  background-color: #fff2f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* Bubbles */
+.bubble-container {
+  position: absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index:0;
+}
+
+.bubble-container span {
+  position: absolute;
+  bottom:-150px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 50%;
+  animation: rise 8s linear infinite;
+}
+
+@keyframes rise {
+  0% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50% { opacity: 0.3; }
+  100% { transform: translateY(-110vh) scale(1.1); opacity:0; }
+}
+
+/* Centered Buttons */
+.button-container {
+  position: absolute;
+  top:50%;
+  left:50%;
+  transform: translate(-50%, -50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:25px;
+  z-index:3;
+}
+
+/* Buttons */
+.btn {
+  background-color: #ffffff;
+  color: #4b3b3b;
+  border:none;
+  border-radius:30px;
+  padding:12px 35px;
+  font-size:1rem;
+  font-weight:500;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(255,182,193,0.8),0 0 20px rgba(255,200,220,0.6);
+  transition:0.3s ease;
+  min-width:180px;
+  text-align:center;
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.btn:hover {
+  transform: scale(1.05);
+  box-shadow:0 0 15px rgba(255,182,193,0.9),0 0 25px rgba(255,200,220,0.7);
+}
+
+@keyframes pulseGlow {
+  0%,100%{ box-shadow:0 0 10px rgba(255,182,193,0.8),0 0 20px rgba(255,200,220,0.6); }
+  50%{ box-shadow:0 0 20px rgba(255,182,193,1),0 0 30px rgba(255,200,220,0.8);}
+}
+
+/* Forms */
+.form-container {
+  display: none;
+  flex-direction: column;
+  align-items:center;
+  gap:15px;
+  margin-top:20px;
+  z-index:4;
+}
+
+input[type="email"], input[type="password"] {
+  width:250px;
+  max-width:90%;
+  padding:12px 15px;
+  border-radius:25px;
+  border:1px solid #ccc;
+  font-size:1rem;
+  outline:none;
+  box-shadow:0 0 5px rgba(255,182,193,0.5);
+  text-align:center;
+  transition:0.3s ease;
+}
+
+input:focus {
+  box-shadow:0 0 10px rgba(255,182,193,0.8);
+  border-color:#ff9bbd;
+}
+
+#loginSubmit, #registerSubmit {
+  min-width:160px;
+  padding:10px 25px;
+}
+
+.switch-msg { font-size:0.9rem; color:#4b3b3b; }
+.switch-link { color:#ff9bbd; cursor:pointer; text-decoration:underline; }
+
+/* Responsive */
+@media(max-width:768px){
+  .button-container{gap:20px;}
+  .btn{font-size:0.9rem; padding:10px 25px; min-width:160px;}
+  input[type="email"], input[type="password"]{width:200px; font-size:0.9rem;}
+  #loginSubmit,#registerSubmit{font-size:0.9rem;padding:10px 20px;}
+}
+
+@media(max-width:480px){
+  input[type="email"], input[type="password"], #loginSubmit, #registerSubmit{
+    width:90%;
+  }
+}

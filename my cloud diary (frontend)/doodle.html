@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>My CloudDiary - Doodle</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Quicksand:wght@500&display=swap" rel="stylesheet">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Quicksand',sans-serif;}
+    body{background:linear-gradient(180deg,#fff8fa 0%, #ffeef3 100%);min-height:100vh;padding:18px;display:flex;flex-direction:column;align-items:center;}
+    header{background:#ff9bbd;color:#fff;padding:14px;border-radius:10px;text-align:center;font-family:'Dancing Script',cursive;font-size:1.6rem;box-shadow:0 4px 10px rgba(0,0,0,0.08);width:100%;max-width:600px;margin-bottom:20px;}
+    .canvas-container{background:#fffafc;border-radius:12px;padding:10px;box-shadow:0 6px 18px rgba(255,182,193,0.12);max-width:420px;width:100%;display:flex;flex-direction:column;align-items:center;}
+    canvas{background:#fffdf9;border:1px solid #ffd9e4;border-radius:8px;touch-action:none;}
+    .controls{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;justify-content:center;}
+    .controls button{background:#fff2f8;border:none;padding:8px 12px;border-radius:8px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+    input[type="color"]{border:none;width:40px;height:40px;border-radius:8px;cursor:pointer;}
+    input[type="text"]{padding:8px;width:90%;border:1px solid #ffd6e0;border-radius:8px;margin:10px 0;}
+    .btn-group{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+    .btn{background:#ff9bbd;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;}
+    .btn.back{background:#ffd6e0;color:#333;}
+  </style>
+</head>
+
+<body>
+  <header>My Doodle</header>
+
+  <div class="canvas-container">
+    <input type="text" id="title" placeholder="Enter doodle title" />
+    <canvas id="canvas" width="350" height="400"></canvas>
+
+    <div class="controls">
+      <input type="color" id="colorPicker" value="#000000">
+      <button id="clearBtn">🧼 Clear</button>
+      <button id="eraserBtn">🩹 Eraser</button>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn" id="saveBtn">Save Doodle</button>
+      <button class="btn" id="viewBtn">View My Doodles</button>
+      <button class="btn back" id="backBtn">Back to Dashboard</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDHr1TTUnAjGJyjDOqBuqvo2tnAKiNvdCE",
+      authDomain: "my-clouddiary.firebaseapp.com",
+      projectId: "my-clouddiary",
+      storageBucket: "my-clouddiary.firebasestorage.app",
+      messagingSenderId: "859635487485",
+      appId: "1:859635487485:web:07bd2c20d274037cade494",
+      measurementId: "G-2WVB9HTS5R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const colorPicker = document.getElementById("colorPicker");
+    const clearBtn = document.getElementById("clearBtn");
+    const eraserBtn = document.getElementById("eraserBtn");
+    const saveBtn = document.getElementById("saveBtn");
+    const viewBtn = document.getElementById("viewBtn");
+    const backBtn = document.getElementById("backBtn");
+    const titleInput = document.getElementById("title");
+
+    let drawing = false;
+    let color = "#000";
+    let eraseMode = false;
+    let currentUserEmail = null;
+    let editId = null; // for editing
+
+    // Detect edit mode
+    const params = new URLSearchParams(window.location.search);
+    editId = params.get("edit");
+
+    // Drawing functions
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mouseup", endDraw);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("touchstart", (e)=>startDraw(e.touches[0]));
+    canvas.addEventListener("touchend", endDraw);
+    canvas.addEventListener("touchmove", (e)=>draw(e.touches[0]));
+
+    function startDraw(e){
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(e.offsetX || e.clientX - canvas.getBoundingClientRect().left,
+                 e.offsetY || e.clientY - canvas.getBoundingClientRect().top);
+    }
+
+    function endDraw(){
+      drawing = false;
+      ctx.closePath();
+    }
+
+    function draw(e){
+      if(!drawing) return;
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = eraseMode ? "#fffdf9" : color;
+      ctx.lineTo(e.offsetX || e.clientX - canvas.getBoundingClientRect().left,
+                 e.offsetY || e.clientY - canvas.getBoundingClientRect().top);
+      ctx.stroke();
+    }
+
+    colorPicker.addEventListener("change", (e)=>{ color = e.target.value; eraseMode=false; });
+    clearBtn.addEventListener("click", ()=>ctx.clearRect(0,0,canvas.width,canvas.height));
+    eraserBtn.addEventListener("click", ()=>eraseMode=!eraseMode);
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(!user){ alert("Please log in first."); window.location.href="index.html"; return; }
+      currentUserEmail = user.email;
+
+      // Load existing doodle if editing
+      if(editId){
+        const docRef = doc(db,"doodles",editId);
+        const snap = await getDoc(docRef);
+        if(snap.exists()){
+          const data = snap.data();
+          titleInput.value = data.title;
+          const img = new Image();
+          img.onload = ()=>ctx.drawImage(img,0,0);
+          img.src = data.dataUrl;
+        } else {
+          alert("Doodle not found!");
+        }
+      }
+    });
+
+    saveBtn.addEventListener("click", async ()=>{
+      const title = titleInput.value.trim();
+      if(!title){ alert("Enter a title first!"); return; }
+
+      const dataUrl = canvas.toDataURL("image/png");
+      try {
+        if(editId){
+          await updateDoc(doc(db,"doodles",editId), { dataUrl });
+          alert("Doodle updated successfully!");
+        } else {
+          await addDoc(collection(db,"doodles"), { user: currentUserEmail, title, dataUrl });
+          alert("Doodle saved successfully!");
+          titleInput.value="";
+          ctx.clearRect(0,0,canvas.width,canvas.height);
+        }
+      } catch(err){ alert("Error saving doodle: "+err.message); }
+    });
+
+    viewBtn.addEventListener("click", ()=>window.location.href="viewDoodles.html");
+    backBtn.addEventListener("click", ()=>window.location.href="landing.html");
+  </script>
+</body>
+</html>
